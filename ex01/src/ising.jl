@@ -8,10 +8,15 @@ function energy(grid::Array{Int, 3},J::Float64, B::Float64=0.0)
     for i in 1:N1
         for j in 1:N2
             for k in 1:N3
-                E += -J*grid[i,j,k]*(grid[mod1(i+1,N1),j,k] + grid[i,mod1(j+1,N2),k] + grid[i,j,mod1(k+1,N3)])
+                E += -J*grid[i,j,k]*(
+                        grid[mod1(i+1,N1),j,k] 
+                        + grid[i,mod1(j+1,N2),k] 
+                        + grid[i,j,mod1(k+1,N3)]
+                    )
             end
         end
     end
+    E -= B*sum(grid)
     return E
 end
 
