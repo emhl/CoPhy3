@@ -2,7 +2,7 @@ function create_grid(N1::Int, N2::Int, N3::Int)
     return rand([-1,1],N1,N2,N3)
 end
 
-function energy(grid::Array{Int, 3},J::Float, B::Float=0.0)
+function energy(grid::Array{Int, 3},J::Float64, B::Float64=0.0)
     N1, N2, N3 = size(grid)
     E = 0.0
     for i in 1:N1
@@ -16,11 +16,11 @@ function energy(grid::Array{Int, 3},J::Float, B::Float=0.0)
 end
 
 function magnetisation(grid::Array{Int, 3})
-    return sum(grid)
+    return sum(grid)/length(grid)
 end
 
 
-function metropolis_step(grid::Array{Int, 3}, J::Float, T::Float=0.0, B::Float=0.0)
+function metropolis_step(grid::Array{Int, 3}, J::Float64, T::Float64=0.0, B::Float64=0.0)
     N1, N2, N3 = size(grid)
     i = rand(1:N1)
     j = rand(1:N2)
