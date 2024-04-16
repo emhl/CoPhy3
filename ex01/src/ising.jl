@@ -12,6 +12,9 @@ function energy(grid::Array{Int, 3},J::Float64, B::Float64=0.0)
                         grid[mod1(i+1,N1),j,k] 
                         + grid[i,mod1(j+1,N2),k] 
                         + grid[i,j,mod1(k+1,N3)]
+                        + grid[mod1(i-1,N1),j,k]
+                        + grid[i,mod1(j-1,N2),k]
+                        + grid[i,j,mod1(k-1,N3)]
                     )
             end
         end
@@ -35,7 +38,7 @@ function metropolis_step(grid::Array{Int, 3}, J::Float64, T::Float64=0.0, B::Flo
     grid_tmp[i,j,k] *= -1
     E_tmp = energy(grid_tmp,J,B)
     if rand() < exp(-(E_tmp-E)/T)
-        grid=copy(grid_tmp)
+        grid=grid_tmp
     end
     return grid
 end
