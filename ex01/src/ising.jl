@@ -26,7 +26,7 @@ function metropolis_step(grid::Array{Int, 3}, J::Float64, T::Float64=0.0, B::Flo
     j = rand(1:N2)
     k = rand(1:N3)
     E = energy(grid,J,B)
-    grid_tmp = copy(grid_tmp)
+    grid_tmp = copy(grid)
     grid_tmp[i,j,k] *= -1
     E_tmp = energy(grid_tmp,J,B)
     if rand() < exp(-(E_tmp-E)/T)
