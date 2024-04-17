@@ -117,7 +117,7 @@ function MonteCarloConstantTemp(grid::Array{Int,3}, J::Int64, T::Int64, B::Int64
     
 end
 
-function MonteCarloConstantTemp(grid::Array{Int,3}, J::Float64, T::Float64=0.0, B::Float64=0.0, n::Int64)
+function MonteCarloConstantTemp(grid::Array{Int,3}, J::Float64, T::Float64, B::Float64, n::Int64)
 
     energies, magnetisations = Float64[], Float64[];
 
