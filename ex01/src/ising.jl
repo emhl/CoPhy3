@@ -106,3 +106,26 @@ function temp_sweep(grid_dimension::Int=10, J::Float64=1.0, T_Start::Float64=0.0
 end
 
 
+
+@doc "derivative of one vector by the other"
+function dv(x::Vector, y::Vector)
+    if length(y) > length(x)
+        laenge = length(x)
+    else
+        laenge = length(y)
+    end
+
+    derivative = Float64[]
+
+    for i in 1:laenge
+        if i == 1
+            push!(derivative, (y[i+1] - y[i])/(x[i+1] - x[i]))
+        elseif i == laenge
+            push!(derivative, (y[i] - y[i-1])/(x[i] - x[i-1]))
+        else
+            push!(derivative, (y[i+1] - y[i-1])/(x[i+1] - x[i-1]))
+        end
+    end
+
+    return derivative
+end
