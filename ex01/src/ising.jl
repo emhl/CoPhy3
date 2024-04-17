@@ -8,8 +8,7 @@ end
 
 
 
-# Energy calculation for different input arguments
-
+@doc "Energy calculation for different input arguments"
 function energy(grid::Array{Int, 3},J::Float64, B::Float64=0.0)
     N1, N2, N3 = size(grid)
     E = 0.0
@@ -20,9 +19,6 @@ function energy(grid::Array{Int, 3},J::Float64, B::Float64=0.0)
                         grid[mod1(i+1,N1),j,k] 
                         + grid[i,mod1(j+1,N2),k] 
                         + grid[i,j,mod1(k+1,N3)]
-                        + grid[mod1(i-1,N1),j,k]
-                        + grid[i,mod1(j-1,N2),k]
-                        + grid[i,j,mod1(k-1,N3)]
                     )
             end
         end
@@ -31,8 +27,7 @@ function energy(grid::Array{Int, 3},J::Float64, B::Float64=0.0)
     return E
 end
 
-# Magnetisation of a given grid
-
+@doc "Magnetisation of a given grid"
 function magnetisation(grid::Array{Int, 3})
     return sum(grid)/length(grid)
 end
@@ -44,8 +39,7 @@ end
 
 
 
-# Metropolitan Step function for different input arguments
-
+@doc "Metropolitan Step function for different input arguments"
 function metropolis_step(grid::Array{Int, 3}, J::Float64, T::Float64=0.0, B::Float64=0.0)
     N1, N2, N3 = size(grid)
     i = rand(1:N1)
@@ -61,8 +55,7 @@ function metropolis_step(grid::Array{Int, 3}, J::Float64, T::Float64=0.0, B::Flo
     return grid
 end
 
-# Function for n repetitions of metropolis_step, tracking the energy and other stats, maybe grid depends on size
-
+@doc "Function for n repetitions of metropolis_step, tracking the energy and other stats, maybe grid depends on size"
 function MonteCarloConstantTemp(grid::Array{Int,3}, J::Float64, T::Float64, B::Float64, n::Int64)
 
     energies, magnetisations = Float64[], Float64[];
