@@ -99,3 +99,34 @@ function metropolis_step(grid::Array{Int, 3}, J::Int64, T::Int64, B::Int64)
     end
     return grid
 end
+
+
+# Function for n repetitions of metropolis_step, tracking the energy and other stats, maybe grid depends on size
+
+function MonteCarloConstantTemp(grid::Array{Int,3}, J::Int64, T::Int64, B::Int64, n::Int64)
+
+    energies, magnetisations = Float64[], Float64[];
+
+        for i in 1:n
+            grid = metropolis_step(grid, J, T, B);
+            push!(energies, energy(grid,J,B));
+            push!(magnetisations, magnetisation(grid));
+        end
+    
+    return grid, energies, magnetisations;
+    
+end
+
+function MonteCarloConstantTemp(grid::Array{Int,3}, J::Float64, T::Float64=0.0, B::Float64=0.0, n::Int64)
+
+    energies, magnetisations = Float64[], Float64[];
+
+        for i in 1:n
+            grid = metropolis_step(grid, J, T, B);
+            push!(energies, energy(grid,J,B));
+            push!(magnetisations, magnetisation(grid));
+        end
+    
+    return grid, energies, magnetisations;
+    
+end
