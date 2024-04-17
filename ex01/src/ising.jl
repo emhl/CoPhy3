@@ -55,8 +55,8 @@ function metropolis_step(grid::Array{Int, 3}, J::Float64, T::Float64=0.0, B::Flo
     return grid
 end
 
-@doc "Function for n repetitions of metropolis_step, tracking the energy and other stats, maybe grid depends on size"
-function MonteCarloConstantTemp(grid::Array{Int,3}, J::Float64, T::Float64, B::Float64, n::Int64)
+@doc "Function for n repetitions of metropolis_step, tracking the energy and magnetization for constant temperature and field"
+function monte_carlo_const_temp(grid::Array{Int,3}, J::Float64, T::Float64, B::Float64, n::Int64)
 
     energies, magnetisations = Float64[], Float64[];
 
