@@ -74,10 +74,8 @@ end
 @doc "function for sweeping over a field intervall using B_Steps steps"
 function field_sweep(grid_dimension::Int=10, J::Float64=1.0, T::Float64=0.0, B_Start::Float64=0.0, B_End::Float64=1.0,B_Steps::Int=100,n::Int=100_000)
     energies, magnetisations, field = Float64[], Float64[], Float64[]
-    grid=create_grid(grid_dimension,grid_dimension,grid_dimension)
-
     for B in range(B_Start,B_End,B_Steps)
-            
+        grid=create_grid(grid_dimension,grid_dimension,grid_dimension) # always start with a new random grid
         for i in 1:n
             grid = metropolis_step(grid, J, T, B);
         end
@@ -91,10 +89,9 @@ end
 @doc "function for sweeping over a temperature intervall using T_Steps steps"
 function temp_sweep(grid_dimension::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T_End::Float64=10.0, B::Float64=0.0, T_Steps::Int=100,n::Int=100_000)
     energies, magnetisations, temp = Float64[], Float64[], Float64[]
-    grid=create_grid(grid_dimension,grid_dimension,grid_dimension)
 
     for T in range(T_Start,T_End,T_Steps)
-            
+        grid=create_grid(grid_dimension,grid_dimension,grid_dimension) # always start with a new random grid
         for i in 1:n
             grid = metropolis_step(grid, J, T, B);
         end
