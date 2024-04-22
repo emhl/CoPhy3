@@ -34,14 +34,24 @@ function state_probability(E::Float64, T::Float64)
 end
 
 function mean_observable(values::Array{Float64,1}, weights::Array{Float64,1})
-    return sum(values .* weights) / sum(weights)
+    #TODO can this function be vectorized?
+    # return sum(values .* weights) / sum(weights)
+    s = 0.0
+    for (value,weight) in zip(values, weights)
+        s += value * weight
+    end
+    return s / sum(weights) # normalize
 end
-
 
 function mean_observable_squared(values::Array{Float64,1}, weights::Array{Float64,1})
-    return sum(values .^ 2 * weights) / sum(weights)
+    #TODO can this function be vectorized?
+    # return sum((values .^ 2) .* weights) / sum(weights)
+    s = 0.0
+    for (value,weight) in zip(values, weights)
+        s += value^2 * weight
+    end
+    return s / sum(weights) # normalize
 end
-
 
 function magnetic_suceptibility(magnetisation_values::Array{Float64,1}, weights::Array{Float64,1})
     return mean_observable_squared(magnetisation_values, weights) - mean_observable(magnetisation_values, weights)^2
