@@ -33,10 +33,28 @@ function magnetisation(grid::Array{Int, 3})
 end
 
 
+function state_probability(E::Float64, T::Float64)
+    return exp(-E/T)
+end
+
+function mean_observable(values::Array{Float64, 1},weights::Array{Float64, 1})
+    return sum(values.*weights)/sum(weights)
+end
 
 
+function mean_observable_squared(values::Array{Float64, 1}, weights::Array{Float64, 1})
+    return sum(values.^2*weights)/sum(weights)
+end
 
 
+function magnetic_suceptibility(magnetisation_values::Array{Float64, 1},weights::Array{Float64, 1})
+    return mean_observable_squared(magnetisation_values,weights) - mean_observable(magnetisation_values,weights)^2
+end
+
+
+function heat_capacity(energy_values::Array{Float64, 1},weights::Array{Float64, 1},T::Float64)
+    return (mean_observable_squared(energy_values,weights) - mean_observable(energy_values,weights)^2)/T^2
+end
 
 
 @doc "Metropolitan Step function for different input arguments"
