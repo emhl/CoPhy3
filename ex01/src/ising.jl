@@ -22,6 +22,25 @@ function energy(grid::Array{Int,3}, J::Float64, B::Float64=0.0)
     return E
 end
 
+# create function that only calculates the anergy diference that the single flip would cause
+function energy_diff(grid::Array{Int,3}, flip_position::Tuple{Int,Int,Int}; J::Float64=1.0, B::Float64=0.0 )
+    N1, N2, N3 = size(grid)
+    delta_E = 0.0
+    i, j, k = flip_position
+    proposed_spin = -grid[i, j, k]
+    # 2x because the Energy contribution is symmetric
+    delta_E += -J * 2 * proposed_spin * (
+        grid[mod1(i + 1, N1), j, k]
+        + grid[i, mod1(j + 1, N2), k]
+        + grid[i, j, mod1(k + 1, N3)]
+        + grid[mod1(i - 1, N1), j, k]
+        + grid[i, mod1(j - 1, N2), k]
+        + grid[i, j, mod1(k - 1, N3)]
+    )
+    delta_E -= B * 2 * proposed_spin
+    return delta_E
+end
+
 
 @doc "Magnetisation of a given grid"
 function magnetisation(grid::Array{Int,3})
