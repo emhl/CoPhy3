@@ -112,6 +112,13 @@ function monte_carlo_const_temp(grid::Array{Int,3}, J::Float64, T::Float64, B::F
 
 end
 
+function create_equilibrated_grid(;grid_size::Int=10, J::Float64=1.0, T::Float64=0.0, B::Float64=0.0, N::Int=100_000)
+    grid = create_grid(grid_size, grid_size, grid_size) # always start with a new random grid
+    for i in 1:N
+        grid = metropolis_step(grid, J, T, B)
+    end
+    return grid
+end
 
 @doc "function for sweeping over a field intervall using B_Steps steps"
 function field_sweep(;grid_size::Int=10, J::Float64=1.0, T::Float64=0.0, B_Start::Float64=0.0, B_End::Float64=1.0, B_Steps::Int=100, N::Int=100_000)
