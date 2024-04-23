@@ -1,3 +1,5 @@
+using Statistics
+
 function create_grid(N1::Int, N2::Int, N3::Int)
     return rand([-1, 1], N1, N2, N3)
 end
@@ -121,35 +123,46 @@ function create_equilibrated_grid(;grid_size::Int=10, J::Float64=1.0, T::Float64
 end
 
 @doc "function for sweeping over a field intervall using B_Steps steps"
-function field_sweep(;grid_size::Int=10, J::Float64=1.0, T::Float64=0.0, B_Start::Float64=0.0, B_End::Float64=1.0, B_Steps::Int=100, N::Int=100_000)
-    energies, magnetisations, field = Float64[], Float64[], Float64[]
+function field_sweep(;grid_size::Int=10, J::Float64=1.0, T::Float64=0.0, B_Start::Float64=0.0, B_End::Float64=1.0, B_Steps::Int=100, N_Sample::Int=1000, N_Thermalize::Int=100_000)
+    energies, energies_sq, magnetisations, magnetisations_sq, fields = Float64[], Float64[], Float64[], Float64[], Float64[]
     for B in range(B_Start, B_End, B_Steps)
-        grid = create_grid(grid_size, grid_size, grid_size) # always start with a new random grid
-        for i in 1:N
+        energies_, magnetisations_ = Float64[], Float64[]
+        # always start with a new random grid
+        grid = create_equilibrated_grid(grid_size=grid_size, J=J, T=T, B=B, N=N_Thermalize)
+        for i in 1:N_Sample
             grid = metropolis_step(grid, J, T, B)
+            push!(magnetisations_, magnetisation(grid))
+            push!(energies_, energy(grid, J, B))
         end
-        push!(magnetisations, magnetisation(grid))
-        push!(energies, energy(grid, J, B))
-        push!(field, B)
+        push!(magnetisations, mean(magnetisations_))
+        push!(magnetisations_sq, mean(magnetisations_ .^ 2))
+        push!(energies, mean(energies_))
+        push!(energies_sq, mean(energies_ .^ 2))
+        push!(fields, B)
     end
-    return energies, magnetisations, field
+    return (energies, energies_sq), (magnetisations, magnetisations_sq), fields
 end
 
 
 @doc "function for sweeping over a temperature intervall using T_Steps steps"
-function temp_sweep(;grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T_End::Float64=10.0, B::Float64=0.0, T_Steps::Int=100, N::Int=100_000)
-    energies, magnetisations, temp = Float64[], Float64[], Float64[]
+function temp_sweep(;grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T_End::Float64=10.0, B::Float64=0.0, T_Steps::Int=100,N_Sample::Int=1000, N_Thermalize::Int=100_000)
+    energies, energies_sq, magnetisations, magnetisations_sq, temps = Float64[], Float64[], Float64[], Float64[], Float64[]
 
     for T in range(T_Start, T_End, T_Steps)
-        grid = create_grid(grid_size, grid_size, grid_size) # always start with a new random grid
-        for i in 1:N
+        energies_, magnetisations_ = Float64[], Float64[]
+        grid = create_equilibrated_grid(grid_size=grid_size, J=J, T=T, B=B, N=N_Thermalize)
+        for i in 1:N_Sample
             grid = metropolis_step(grid, J, T, B)
+            push!(magnetisations_, magnetisation(grid))
+            push!(energies_, energy(grid, J, B))
         end
-        push!(magnetisations, magnetisation(grid))
-        push!(energies, energy(grid, J, B))
-        push!(temp, T)
+        push!(magnetisations, mean(magnetisations_))
+        push!(magnetisations_sq, mean(magnetisations_ .^ 2))
+        push!(energies, mean(energies_))
+        push!(energies_sq, mean(energies_ .^ 2))
+        push!(temps, T)
     end
-    return energies, magnetisations, temp
+    return (energies, energies_sq), (magnetisations, magnetisations_sq), temps
 end
 
 
