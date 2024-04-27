@@ -43,6 +43,13 @@ function energy_diff(grid::Array{Int,3}, flip_position::Tuple{Int,Int,Int}; J::F
     return delta_E
 end
 
+function create_lookup_table(T::Float64; J::Float64=1.0, dimension::Int=3)
+    lookup_table = Dict{Float64,Float64}()
+    for e in -4*dimension:4*dimension
+        lookup_table[J*e] = state_probability(J*e, T)
+    end
+    return lookup_table
+end
 
 @doc "Magnetisation of a given grid"
 function magnetisation(grid::Array{Int,3})
@@ -85,13 +92,13 @@ end
 
 
 @doc "Metropolitan Step function for different input arguments"
-function metropolis_step(grid::Array{Int,3}, J::Float64, T::Float64=0.0, B::Float64=0.0)
+function metropolis_step(grid::Array{Int,3}, J::Float64, lookup_table::Dict{Float64,Float64}, T::Float64=0.0, B::Float64=0.0)
     N1, N2, N3 = size(grid)
     i = rand(1:N1)
     j = rand(1:N2)
     k = rand(1:N3)
     dE = energy_diff(grid, (i, j, k), J=J, B=B)
-    if rand() < exp(-dE / T)
+    if rand() < lookup_table[dE]
         grid[i, j, k] *= -1
     end
     return grid
@@ -103,9 +110,9 @@ end
 function monte_carlo_const_temp(grid::Array{Int,3}, J::Float64, T::Float64, B::Float64, n::Int64)
 
     energies, magnetisations = Float64[], Float64[]
-
+    lookup_table = create_lookup_table(T, J=J)
     for i in 1:n
-        grid = metropolis_step(grid, J, T, B)
+        grid = metropolis_step(grid, J, lookup_table, T, B)
         push!(energies, energy(grid, J, B))
         push!(magnetisations, magnetisation(grid))
     end
@@ -114,35 +121,13 @@ function monte_carlo_const_temp(grid::Array{Int,3}, J::Float64, T::Float64, B::F
 
 end
 
-function create_equilibrated_grid(;grid_size::Int=10, J::Float64=1.0, T::Float64=0.0, B::Float64=0.0, N::Int=100_000)
+function create_equilibrated_grid(;grid_size::Int=10, J::Float64=1.0, lookup_table::Dict{Float64,Float64}, T::Float64=0.0, B::Float64=0.0, N::Int=100_000)
     grid = create_grid(grid_size, grid_size, grid_size) # always start with a new random grid
     for i in 1:N
-        grid = metropolis_step(grid, J, T, B)
+        grid = metropolis_step(grid, J, lookup_table, T, B)
     end
     return grid
 end
-
-@doc "function for sweeping over a field intervall using B_Steps steps"
-function field_sweep(;grid_size::Int=10, J::Float64=1.0, T::Float64=0.0, B_Start::Float64=0.0, B_End::Float64=1.0, B_Steps::Int=100, N_Sample::Int=1000, N_Thermalize::Int=100_000)
-    energies, energies_sq, magnetisations, magnetisations_sq, fields = Float64[], Float64[], Float64[], Float64[], Float64[]
-    for B in range(B_Start, B_End, B_Steps)
-        energies_, magnetisations_ = Float64[], Float64[]
-        # always start with a new random grid
-        grid = create_equilibrated_grid(grid_size=grid_size, J=J, T=T, B=B, N=N_Thermalize)
-        for i in 1:N_Sample
-            grid = metropolis_step(grid, J, T, B)
-            push!(magnetisations_, magnetisation(grid))
-            push!(energies_, energy(grid, J, B))
-        end
-        push!(magnetisations, mean(magnetisations_))
-        push!(magnetisations_sq, mean(magnetisations_ .^ 2))
-        push!(energies, mean(energies_))
-        push!(energies_sq, mean(energies_ .^ 2))
-        push!(fields, B)
-    end
-    return (energies, energies_sq), (magnetisations, magnetisations_sq), fields
-end
-
 
 @doc "function for sweeping over a temperature intervall using T_Steps steps"
 function temp_sweep(;grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T_End::Float64=10.0, B::Float64=0.0, T_Steps::Int=100,N_Sample::Int=1000, N_Thermalize::Int=100_000)
@@ -150,9 +135,10 @@ function temp_sweep(;grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T_
 
     for T in range(T_Start, T_End, T_Steps)
         energies_, magnetisations_ = Float64[], Float64[]
-        grid = create_equilibrated_grid(grid_size=grid_size, J=J, T=T, B=B, N=N_Thermalize)
+        lookup_table = create_lookup_table(T, J=J)
+        grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=lookup_table, T=T, B=B, N=N_Thermalize)
         for i in 1:N_Sample
-            grid = metropolis_step(grid, J, T, B)
+            grid = metropolis_step(grid, J, lookup_table, T, B)
             push!(magnetisations_, magnetisation(grid))
             push!(energies_, energy(grid, J, B))
         end
