@@ -25,20 +25,20 @@ function energy(grid::Array{Int,3}, J::Float64, B::Float64=0.0)
 end
 
 # create function that only calculates the anergy diference that the single flip would cause
-function energy_diff(grid::Array{Int,3}, flip_position::Tuple{Int,Int,Int}; J::Float64=1.0, B::Float64=0.0 )
+function energy_diff(grid::Array{Int,3}, flip_position::Tuple{Int,Int,Int}; J::Float64=1.0, B::Float64=0.0)
     N1, N2, N3 = size(grid)
     delta_E = 0.0
     i, j, k = flip_position
     proposed_spin = -grid[i, j, k]
     # 2x because the Energy contribution is symmetric
     delta_E += -J * 2 * proposed_spin * (
-        grid[mod1(i + 1, N1), j, k]
-        + grid[i, mod1(j + 1, N2), k]
-        + grid[i, j, mod1(k + 1, N3)]
-        + grid[mod1(i - 1, N1), j, k]
-        + grid[i, mod1(j - 1, N2), k]
-        + grid[i, j, mod1(k - 1, N3)]
-    )
+                   grid[mod1(i + 1, N1), j, k]
+                   + grid[i, mod1(j + 1, N2), k]
+                   + grid[i, j, mod1(k + 1, N3)]
+                   + grid[mod1(i - 1, N1), j, k]
+                   + grid[i, mod1(j - 1, N2), k]
+                   + grid[i, j, mod1(k - 1, N3)]
+               )
     delta_E -= B * 2 * proposed_spin
     return delta_E
 end
@@ -46,7 +46,7 @@ end
 function create_lookup_table(T::Float64; J::Float64=1.0, dimension::Int=3)
     lookup_table = Dict{Float64,Float64}()
     for e in -4*dimension:4*dimension
-        lookup_table[J*e] = state_probability(J*e, T)
+        lookup_table[J*e] = state_probability(J * e, T)
     end
     return lookup_table
 end
@@ -65,7 +65,7 @@ function mean_observable(values::Array{Float64,1}, weights::Array{Float64,1})
     #TODO can this function be vectorized?
     # return sum(values .* weights) / sum(weights)
     s = 0.0
-    for (value,weight) in zip(values, weights)
+    for (value, weight) in zip(values, weights)
         s += value * weight
     end
     return s / sum(weights) # normalize
@@ -75,7 +75,7 @@ function mean_observable_squared(values::Array{Float64,1}, weights::Array{Float6
     #TODO can this function be vectorized?
     # return sum((values .^ 2) .* weights) / sum(weights)
     s = 0.0
-    for (value,weight) in zip(values, weights)
+    for (value, weight) in zip(values, weights)
         s += value^2 * weight
     end
     return s / sum(weights) # normalize
@@ -105,7 +105,7 @@ function metropolis_step(grid::Array{Int,3}, J::Float64, lookup_table::Dict{Floa
         dE = 0
         dM = 0
     end
-    return grid ,dE, dM
+    return grid, dE, dM
 end
 
 
@@ -125,7 +125,7 @@ function monte_carlo_const_temp(grid::Array{Int,3}, J::Float64, T::Float64, B::F
 
 end
 
-function create_equilibrated_grid(;grid_size::Int=10, J::Float64=1.0, lookup_table::Dict{Float64,Float64}, T::Float64=0.0, B::Float64=0.0, N::Int=100_000)
+function create_equilibrated_grid(; grid_size::Int=10, J::Float64=1.0, lookup_table::Dict{Float64,Float64}, T::Float64=0.0, B::Float64=0.0, N::Int=100_000)
     grid = create_grid(grid_size, grid_size, grid_size) # always start with a new random grid
     for i in 1:N
         grid, _ = metropolis_step(grid, J, lookup_table, T, B)
@@ -134,16 +134,16 @@ function create_equilibrated_grid(;grid_size::Int=10, J::Float64=1.0, lookup_tab
 end
 
 @doc "function for sweeping over a temperature intervall using T_Steps steps"
-function temp_sweep(;grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T_End::Float64=10.0, B::Float64=0.0, T_Steps::Int=100,N_Sample::Int=1000, N_Thermalize::Int=100_000, use_same_grid::Bool=false)
+function temp_sweep(; grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T_End::Float64=10.0, B::Float64=0.0, T_Steps::Int=100, N_Sample::Int=1000, N_Thermalize::Int=100_000, use_same_grid::Bool=false)
     energies, energies_sq, magnetisations, magnetisations_sq, temps = Float64[], Float64[], Float64[], Float64[], Float64[]
-    if (use_same_grid=true)
+    if (use_same_grid = true)
         # on first step the grid gets thermalized twice as long
         grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=create_lookup_table(T_Start, J=J), T=T_Start, B=B, N=N_Thermalize)
     end
     for T in range(T_Start, T_End, T_Steps)
         energies_, magnetisations_ = Float64[], Float64[]
         lookup_table = create_lookup_table(T, J=J)
-        if (use_same_grid==false) # default behaviour
+        if (use_same_grid == false) # default behaviour
             grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=lookup_table, T=T, B=B, N=N_Thermalize)
         else
             for i in 1:N_Thermalize
@@ -156,7 +156,7 @@ function temp_sweep(;grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T_
         for i in 1:N_Sample
             grid, dE, dM = metropolis_step(grid, J, lookup_table, T, B)
             energy_ += dE
-            magnetisation_ += dM/len_grid
+            magnetisation_ += dM / len_grid
             push!(energies_, energy_)
             push!(magnetisations_, magnetisation_)
         end
