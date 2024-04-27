@@ -24,7 +24,7 @@ function energy(grid::Array{Int,3}, J::Float64, B::Float64=0.0)
     return E
 end
 
-# create function that only calculates the anergy diference that the single flip would cause
+# create function that only calculates the energy diference that the single flip would cause
 function energy_diff(grid::Array{Int,3}, flip_position::Tuple{Int,Int,Int}; J::Float64=1.0, B::Float64=0.0)
     N1, N2, N3 = size(grid)
     delta_E = 0.0
@@ -43,6 +43,7 @@ function energy_diff(grid::Array{Int,3}, flip_position::Tuple{Int,Int,Int}; J::F
     return delta_E
 end
 
+@doc "Creates a lookup table for the values of the exponential function."
 function create_lookup_table(T::Float64; J::Float64=1.0, dimension::Int=3)
     lookup_table = Dict{Float64,Float64}()
     for e in -4*dimension:4*dimension
@@ -56,11 +57,12 @@ function magnetisation(grid::Array{Int,3})
     return sum(grid) / length(grid)
 end
 
-
+@doc "Calculates the probabilites for a given temperature and Energy for the lookup table."
 function state_probability(E::Float64, T::Float64)
     return exp(-E / T)
 end
 
+@doc "Calculates the weighted mean value of an Array"
 function mean_observable(values::Array{Float64,1}, weights::Array{Float64,1})
     #TODO can this function be vectorized?
     # return sum(values .* weights) / sum(weights)
@@ -71,6 +73,7 @@ function mean_observable(values::Array{Float64,1}, weights::Array{Float64,1})
     return s / sum(weights) # normalize
 end
 
+@doc "Calculates the weighted mean of the squared array values"
 function mean_observable_squared(values::Array{Float64,1}, weights::Array{Float64,1})
     #TODO can this function be vectorized?
     # return sum((values .^ 2) .* weights) / sum(weights)
@@ -81,11 +84,12 @@ function mean_observable_squared(values::Array{Float64,1}, weights::Array{Float6
     return s / sum(weights) # normalize
 end
 
+@doc "Calculates the magnetic suscebtibility using the variance of the magnetization"
 function magnetic_suceptibility(magnetisation_values::Array{Float64,1}, weights::Array{Float64,1})
     return mean_observable_squared(magnetisation_values, weights) - mean_observable(magnetisation_values, weights)^2
 end
 
-
+@doc "Calculates the heat capacity using the variance of the Energy"
 function heat_capacity(energy_values::Array{Float64,1}, weights::Array{Float64,1}, T::Float64)
     return (mean_observable_squared(energy_values, weights) - mean_observable(energy_values, weights)^2) / T^2
 end
@@ -125,6 +129,7 @@ function monte_carlo_const_temp(grid::Array{Int,3}, J::Float64, T::Float64, B::F
 
 end
 
+@doc "Function to create an equilibrated grid after N Thermalisation steps"
 function create_equilibrated_grid(; grid_size::Int=10, J::Float64=1.0, lookup_table::Dict{Float64,Float64}, T::Float64=0.0, B::Float64=0.0, N::Int=100_000)
     grid = create_grid(grid_size, grid_size, grid_size) # always start with a new random grid
     for i in 1:N
