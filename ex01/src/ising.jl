@@ -141,10 +141,15 @@ function temp_sweep(;grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T_
         energies_, magnetisations_ = Float64[], Float64[]
         lookup_table = create_lookup_table(T, J=J)
         grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=lookup_table, T=T, B=B, N=N_Thermalize)
+        len_grid = length(grid)
+        energy_ = energy(grid, J, B)
+        magnetisation_ = magnetisation(grid)
         for i in 1:N_Sample
-            grid, _ = metropolis_step(grid, J, lookup_table, T, B)
-            push!(magnetisations_, magnetisation(grid))
-            push!(energies_, energy(grid, J, B))
+            grid, dE, dM = metropolis_step(grid, J, lookup_table, T, B)
+            energy_ += dE
+            magnetisation_ += dM/len_grid
+            push!(energies_, energy_)
+            push!(magnetisations_, magnetisation_)
         end
         push!(magnetisations, mean(magnetisations_))
         push!(magnetisations_sq, mean(magnetisations_ .^ 2))
