@@ -141,14 +141,14 @@ end
 @doc "function for sweeping over a temperature intervall using T_Steps steps"
 function temp_sweep(; grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T_End::Float64=10.0, B::Float64=0.0, T_Steps::Int=100, N_Sample::Int=1000, N_Thermalize::Int=100_000, use_same_grid::Bool=false)
     energies, energies_sq, magnetisations, magnetisations_sq, temps = Float64[], Float64[], Float64[], Float64[], Float64[]
-    if (use_same_grid = true)
+    if (use_same_grid)
         # on first step the grid gets thermalized twice as long
         grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=create_lookup_table(T_Start, J=J), T=T_Start, B=B, N=N_Thermalize)
     end
     for T in range(T_Start, T_End, T_Steps)
         energies_, magnetisations_ = Float64[], Float64[]
         lookup_table = create_lookup_table(T, J=J)
-        if (use_same_grid == false) # default behaviour
+        if (!use_same_grid) # default behaviour
             grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=lookup_table, T=T, B=B, N=N_Thermalize)
         else
             for i in 1:N_Thermalize
