@@ -134,13 +134,22 @@ function create_equilibrated_grid(;grid_size::Int=10, J::Float64=1.0, lookup_tab
 end
 
 @doc "function for sweeping over a temperature intervall using T_Steps steps"
-function temp_sweep(;grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T_End::Float64=10.0, B::Float64=0.0, T_Steps::Int=100,N_Sample::Int=1000, N_Thermalize::Int=100_000)
+function temp_sweep(;grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T_End::Float64=10.0, B::Float64=0.0, T_Steps::Int=100,N_Sample::Int=1000, N_Thermalize::Int=100_000, use_same_grid::Bool=false)
     energies, energies_sq, magnetisations, magnetisations_sq, temps = Float64[], Float64[], Float64[], Float64[], Float64[]
-
+    if (use_same_grid=true)
+        # on first step the grid gets thermalized twice as long
+        grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=create_lookup_table(T_Start, J=J), T=T_Start, B=B, N=N_Thermalize)
+    end
     for T in range(T_Start, T_End, T_Steps)
         energies_, magnetisations_ = Float64[], Float64[]
         lookup_table = create_lookup_table(T, J=J)
-        grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=lookup_table, T=T, B=B, N=N_Thermalize)
+        if (use_same_grid==false) # default behaviour
+            grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=lookup_table, T=T, B=B, N=N_Thermalize)
+        else
+            for i in 1:N_Thermalize
+                grid, _ = metropolis_step(grid, J, lookup_table, T, B)
+            end
+        end
         len_grid = length(grid)
         energy_ = energy(grid, J, B)
         magnetisation_ = magnetisation(grid)
