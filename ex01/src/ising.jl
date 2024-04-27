@@ -100,8 +100,12 @@ function metropolis_step(grid::Array{Int,3}, J::Float64, lookup_table::Dict{Floa
     dE = energy_diff(grid, (i, j, k), J=J, B=B)
     if rand() < lookup_table[dE]
         grid[i, j, k] *= -1
+        dM = 2 * grid[i, j, k]
+    else
+        dE = 0
+        dM = 0
     end
-    return grid
+    return grid ,dE, dM
 end
 
 
@@ -112,7 +116,7 @@ function monte_carlo_const_temp(grid::Array{Int,3}, J::Float64, T::Float64, B::F
     energies, magnetisations = Float64[], Float64[]
     lookup_table = create_lookup_table(T, J=J)
     for i in 1:n
-        grid = metropolis_step(grid, J, lookup_table, T, B)
+        grid, _ = metropolis_step(grid, J, lookup_table, T, B)
         push!(energies, energy(grid, J, B))
         push!(magnetisations, magnetisation(grid))
     end
@@ -124,7 +128,7 @@ end
 function create_equilibrated_grid(;grid_size::Int=10, J::Float64=1.0, lookup_table::Dict{Float64,Float64}, T::Float64=0.0, B::Float64=0.0, N::Int=100_000)
     grid = create_grid(grid_size, grid_size, grid_size) # always start with a new random grid
     for i in 1:N
-        grid = metropolis_step(grid, J, lookup_table, T, B)
+        grid, _ = metropolis_step(grid, J, lookup_table, T, B)
     end
     return grid
 end
@@ -138,7 +142,7 @@ function temp_sweep(;grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T_
         lookup_table = create_lookup_table(T, J=J)
         grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=lookup_table, T=T, B=B, N=N_Thermalize)
         for i in 1:N_Sample
-            grid = metropolis_step(grid, J, lookup_table, T, B)
+            grid, _ = metropolis_step(grid, J, lookup_table, T, B)
             push!(magnetisations_, magnetisation(grid))
             push!(energies_, energy(grid, J, B))
         end
