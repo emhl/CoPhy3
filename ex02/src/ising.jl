@@ -1,4 +1,5 @@
 using Statistics
+using ProgressMeter
 
 function create_grid(N1::Int, N2::Int=N1, N3::Int=N1; up_prob::Float64=0.5)
     # up_prob is the probability of a spin being up
@@ -148,7 +149,7 @@ function temp_sweep(; grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T
         # on first step the grid gets thermalized twice as long
         grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=create_lookup_table(T_Start, J=J), T=T_Start, B=B, N=N_Thermalize)
     end
-    for T in range(T_Start, T_End, T_Steps)
+    @showprogress "Iterating over temperature..." for T in range(T_Start, T_End, T_Steps)
         energies_, magnetisations_ = Float64[], Float64[]
         lookup_table = create_lookup_table(T, J=J)
         if (!use_same_grid) # default behaviour
