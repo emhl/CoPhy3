@@ -133,48 +133,55 @@ function monte_carlo_const_temp(grid::Array{Int,3}, J::Float64, T::Float64, B::F
 end
 
 @doc "Function to create an equilibrated grid after N Thermalisation steps"
-function create_equilibrated_grid(; grid_size::Int=10, J::Float64=1.0, lookup_table::Dict{Float64,Float64}, T::Float64=0.0, B::Float64=0.0, N::Int=100_000)
-    grid = create_grid(grid_size, grid_size, grid_size) # always start with a new random grid
+function create_equilibrated_grid(; grid_size::Int=10, J::Float64=1.0, lookup_table::Dict{Float64,Float64}, T::Float64=0.0, B::Float64=0.0, N::Int=100*grid_size^3  , initial_up_prob::Float64=0.5)
+    grid = create_grid(grid_size, up_prob=initial_up_prob) # always start with a new random grid
     for i in 1:N
         grid, _ = metropolis_step(grid, J, lookup_table, T, B)
     end
     return grid
 end
 
-@doc "function for sweeping over a temperature intervall using T_Steps steps"
-function temp_sweep(; grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T_End::Float64=10.0, B::Float64=0.0, T_Steps::Int=100, N_Sample::Int=1000, N_Thermalize::Int=100_000, use_same_grid::Bool=false)
-    energies, energies_sq, magnetisations, magnetisations_sq, temps = Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps)
-    if (use_same_grid)
-        # on first step the grid gets thermalized twice as long
-        grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=create_lookup_table(T_Start, J=J), T=T_Start, B=B, N=N_Thermalize)
+function subsweep(grid::Array{Int,3}, J::Float64, lookup_table::Dict{Float64,Float64}, T::Float64=0.0, B::Float64=0.0, N::Int=1_000)
+    dE, dM = 0.0, 0.0
+    for i in 1:N
+        grid, dE_, dM_ = metropolis_step(grid, J, lookup_table, T, B)
+        dE += dE_
+        dM += dM_
     end
+    return grid, dE, dM
+end
+
+
+function sample_grid(grid::Array{Int,3}, J::Float64, lookup_table::Dict{Float64,Float64}; T::Float64=0.0, B::Float64=0.0, N::Int=1_000, N_Subsweep::Int=1_000)
+    energies, magnetisations = Vector{Float64}(undef, N) , Vector{Float64}(undef, N)
+    energy_ = energy(grid, J, B)
+    magnetisation_ = magnetisation(grid)
+    for i in 1:N
+        grid, dE, dM = subsweep(grid, J, lookup_table, T, B, N_Subsweep)
+        energy_ += dE
+        magnetisation_ += dM
+        energies[i] = energy_
+        magnetisations[i] = magnetisation_
+    end
+    return energies, magnetisations
+end
+
+@doc "function for sweeping over a temperature intervall using T_Steps steps"
+function temp_sweep(; grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T_End::Float64=10.0, B::Float64=0.0, T_Steps::Int=100, N_Sample::Int=1000, N_Thermalize::Int=100*grid_size^3, N_Subsweep::Int =3*grid_size^3, initial_up_prob::Float64=0.5)
+    energies, energies_std, magnetisations, magnetisations_std, temps = Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps)
     @showprogress "Iterating over temperature..." for (iT, T) in enumerate(range(T_Start, T_End, T_Steps))
-        energies_, magnetisations_ = Vector{Float64}(undef, N_Sample) , Vector{Float64}(undef, N_Sample)
         lookup_table = create_lookup_table(T, J=J)
-        if (!use_same_grid) # default behaviour
-            grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=lookup_table, T=T, B=B, N=N_Thermalize)
-        else
-            for i in 1:N_Thermalize
-                grid, _ = metropolis_step(grid, J, lookup_table, T, B)
-            end
-        end
-        len_grid = length(grid)
-        energy_ = energy(grid, J, B)
-        magnetisation_ = magnetisation(grid)
-        for i in 1:N_Sample
-            grid, dE, dM = metropolis_step(grid, J, lookup_table, T, B)
-            energy_ += dE
-            magnetisation_ += dM / len_grid
-            energies_[i] = energy_
-            magnetisations_[i] = magnetisation_
-        end
+        grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=lookup_table, T=T, B=B, N=N_Thermalize, initial_up_prob=initial_up_prob)
+
+        energies_, magnetisations_ = sample_grid(grid, J, lookup_table, T=T, B=B, N=N_Sample, N_Subsweep=N_Subsweep)
+        magnetisations_ = magnetisations_ ./ grid_size^3
         magnetisations[iT] = mean(magnetisations_)
-        magnetisations_sq[iT] = mean(magnetisations_ .^ 2)
+        magnetisations_std[iT] = std(magnetisations_)
         energies[iT] = mean(energies_)
-        energies_sq[iT] = mean(energies_ .^ 2)
+        energies_std[iT] = std(energies_)
         temps[iT] = T
     end
-    return (energies, energies_sq), (magnetisations, magnetisations_sq), temps
+    return (energies, energies_std), (magnetisations, magnetisations_std), temps
 end
 
 
