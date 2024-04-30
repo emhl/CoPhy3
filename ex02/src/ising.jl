@@ -1,7 +1,10 @@
 using Statistics
 
-function create_grid(N1::Int, N2::Int, N3::Int)
-    return rand([-1, 1], N1, N2, N3)
+function create_grid(N1::Int, N2::Int=N1, N3::Int=N1; up_prob::Float64=0.5)
+    # up_prob is the probability of a spin being up
+    grid = rand(N1, N2, N3) .< up_prob # creates boolean grid
+    grid = 2 * grid .- 1 # converts boolean grid to -1, 1 grid
+    return grid
 end
 
 
