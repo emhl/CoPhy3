@@ -156,10 +156,11 @@ function sample_grid(grid::Array{Int,3}, J::Float64, lookup_table::Dict{Float64,
     energies, magnetisations = Vector{Float64}(undef, N) , Vector{Float64}(undef, N)
     energy_ = energy(grid, J, B)
     magnetisation_ = magnetisation(grid)
+    grid_len = length(grid)
     for i in 1:N
         grid, dE, dM = subsweep(grid, J, lookup_table, T, B, N_Subsweep)
         energy_ += dE
-        magnetisation_ += dM
+        magnetisation_ += dM / grid_len
         energies[i] = energy_
         magnetisations[i] = magnetisation_
     end
@@ -172,9 +173,9 @@ function temp_sweep(; grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T
     @showprogress "Iterating over temperature..." for (iT, T) in enumerate(range(T_Start, T_End, T_Steps))
         lookup_table = create_lookup_table(T, J=J)
         grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=lookup_table, T=T, B=B, N=N_Thermalize, initial_up_prob=initial_up_prob)
-
+        
         energies_, magnetisations_ = sample_grid(grid, J, lookup_table, T=T, B=B, N=N_Sample, N_Subsweep=N_Subsweep)
-        magnetisations_ = magnetisations_ ./ grid_size^3
+
         magnetisations[iT] = mean(magnetisations_)
         magnetisations_std[iT] = std(magnetisations_)
         energies[iT] = mean(energies_)
