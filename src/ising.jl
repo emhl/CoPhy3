@@ -8,6 +8,33 @@ function create_grid(N1::Int, N2::Int=N1, N3::Int=N1; up_prob::Float64=0.5)
     return grid
 end
 
+@doc "Cluster labeling algorithm for neighbouring spins"
+function hoshen_kopelmann_clustering(grid::Array{Int,3})
+    # variation of the Hoshen-Kopelmann algorithm, because there are no unoccupied sites
+    N1, N2, N3 = size(grid)
+    labels = zeros(Int, N1, N2, N3)
+    next_label = 1
+    for i in 1:N1, j in 1:N2, k in 1:N3
+        neighbours = [(mod1(i - 1, N1), j, k), (i, mod1(j - 1, N2), k), (i, j, mod1(k - 1, N3))] # periodic boundary conditions
+
+        state = grid[i, j, k]
+        neighbour_states = [grid[n...] for n in neighbours]
+        neighbours = neighbours[neighbour_states.==state]
+
+        neighbour_labels = [labels[n...] for n in neighbours]
+        if sum(neighbour_labels) == 0
+            labels[i, j, k] = next_label
+            next_label += 1
+        else
+            neighbour_labels = neighbour_labels[neighbour_labels.!=0] # remove 0 labels
+            labels[i, j, k] = minimum(neighbour_labels) # assign the minimum label
+            for l in neighbour_labels
+                labels[labels.==l] .= labels[i, j, k] # relabel the neighbours
+            end
+        end
+    end
+    return labels
+end
 
 @doc "Energy calculation for different input arguments"
 function energy(grid::Array{Int,3}, J::Float64, B::Float64=0.0)
@@ -121,7 +148,7 @@ end
 @doc "Function for n repetitions of metropolis_step, tracking the energy and magnetization for constant temperature and field"
 function monte_carlo_const_temp(grid::Array{Int,3}, J::Float64, T::Float64, B::Float64, n::Int64)
 
-    energies, magnetisations = Vector{Float64}(undef, n) , Vector{Float64}(undef, n)
+    energies, magnetisations = Vector{Float64}(undef, n), Vector{Float64}(undef, n)
     lookup_table = create_lookup_table(T, J=J)
     for i in 1:n
         grid, _ = metropolis_step(grid, J, lookup_table, T, B)
@@ -133,7 +160,7 @@ function monte_carlo_const_temp(grid::Array{Int,3}, J::Float64, T::Float64, B::F
 end
 
 @doc "Function to create an equilibrated grid after N Thermalisation steps"
-function create_equilibrated_grid(; grid_size::Int=10, J::Float64=1.0, lookup_table::Dict{Float64,Float64}, T::Float64=0.0, B::Float64=0.0, N::Int=100*grid_size^3  , initial_up_prob::Float64=0.5)
+function create_equilibrated_grid(; grid_size::Int=10, J::Float64=1.0, lookup_table::Dict{Float64,Float64}, T::Float64=0.0, B::Float64=0.0, N::Int=100 * grid_size^3, initial_up_prob::Float64=0.5)
     grid = create_grid(grid_size, up_prob=initial_up_prob) # always start with a new random grid
     for i in 1:N
         grid, _ = metropolis_step(grid, J, lookup_table, T, B)
@@ -153,7 +180,7 @@ end
 
 
 function sample_grid(grid::Array{Int,3}, J::Float64, lookup_table::Dict{Float64,Float64}; T::Float64=0.0, B::Float64=0.0, N::Int=1_000, N_Subsweep::Int=1_000)
-    energies, magnetisations = Vector{Float64}(undef, N) , Vector{Float64}(undef, N)
+    energies, magnetisations = Vector{Float64}(undef, N), Vector{Float64}(undef, N)
     energy_ = energy(grid, J, B)
     magnetisation_ = magnetisation(grid)
     grid_len = length(grid)
@@ -168,12 +195,12 @@ function sample_grid(grid::Array{Int,3}, J::Float64, lookup_table::Dict{Float64,
 end
 
 @doc "function for sweeping over a temperature intervall using T_Steps steps"
-function temp_sweep(; grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T_End::Float64=10.0, B::Float64=0.0, T_Steps::Int=100, N_Sample::Int=1000, N_Thermalize::Int=100*grid_size^3, N_Subsweep::Int =3*grid_size^3, initial_up_prob::Float64=0.5)
+function temp_sweep(; grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T_End::Float64=10.0, B::Float64=0.0, T_Steps::Int=100, N_Sample::Int=1000, N_Thermalize::Int=100 * grid_size^3, N_Subsweep::Int=3 * grid_size^3, initial_up_prob::Float64=0.5)
     energies, energies_std, magnetisations, magnetisations_std, temps = Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps)
     @showprogress "Iterating over temperature..." for (iT, T) in enumerate(range(T_Start, T_End, T_Steps))
         lookup_table = create_lookup_table(T, J=J)
         grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=lookup_table, T=T, B=B, N=N_Thermalize, initial_up_prob=initial_up_prob)
-        
+
         energies_, magnetisations_ = sample_grid(grid, J, lookup_table, T=T, B=B, N=N_Sample, N_Subsweep=N_Subsweep)
 
         magnetisations[iT] = mean(abs.(magnetisations_))
