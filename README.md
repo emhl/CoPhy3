@@ -1,4 +1,6 @@
-# Exercise 1. Ising model
+# Computational Physics - Course Summer 2024
+
+## Exercise 1. Ising model
 
 Goal: We start by simulating the 3D Ising model using the Metropolis-based single-spin flip Monte Carlo method.
 
