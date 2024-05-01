@@ -176,8 +176,9 @@ function temp_sweep(; grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T
         
         energies_, magnetisations_ = sample_grid(grid, J, lookup_table, T=T, B=B, N=N_Sample, N_Subsweep=N_Subsweep)
 
-        magnetisations[iT] = mean(magnetisations_)
-        magnetisations_std[iT] = std(magnetisations_)
+        magnetisations[iT] = mean(abs.(magnetisations_))
+        magnetisations_std[iT] = std(abs.(magnetisations_))
+        # only take the absolute value of the magnetisation, because the system is symmetric
         energies[iT] = mean(energies_)
         energies_std[iT] = std(energies_)
         temps[iT] = T
