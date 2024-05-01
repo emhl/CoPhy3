@@ -222,18 +222,18 @@ function monte_carlo_const_temp(grid::Array{Int,3}, J::Float64, T::Float64, B::F
 end
 
 @doc "Function to create an equilibrated grid after N Thermalisation steps"
-function create_equilibrated_grid(; grid_size::Int=10, J::Float64=1.0, lookup_table::Dict{Float64,Float64}, T::Float64=0.0, B::Float64=0.0, N::Int=100 * grid_size^3, initial_up_prob::Float64=0.5)
+function create_equilibrated_grid(; grid_size::Int=10, J::Float64=1.0, lookup_table::Dict{Float64,Float64}, T::Float64=0.0, B::Float64=0.0, N::Int=100 * grid_size^3, initial_up_prob::Float64=0.5, mc_algorithm::Function=metropolis_step)
     grid = create_grid(grid_size, up_prob=initial_up_prob) # always start with a new random grid
     for i in 1:N
-        grid, _ = metropolis_step(grid, J, lookup_table, T, B)
+        grid, _ = mc_algorithm(grid, J, lookup_table, T, B)
     end
     return grid
 end
 
-function subsweep(grid::Array{Int,3}, J::Float64, lookup_table::Dict{Float64,Float64}, T::Float64=0.0, B::Float64=0.0, N::Int=1_000)
+function subsweep(grid::Array{Int,3}, J::Float64, lookup_table::Dict{Float64,Float64}, T::Float64=0.0, B::Float64=0.0, N::Int=1_000, mc_algorithm::Function=metropolis_step)
     dE, dM = 0.0, 0.0
     for i in 1:N
-        grid, dE_, dM_ = metropolis_step(grid, J, lookup_table, T, B)
+        grid, dE_, dM_ = mc_algorithm(grid, J, lookup_table, T, B)
         dE += dE_
         dM += dM_
     end
@@ -241,13 +241,13 @@ function subsweep(grid::Array{Int,3}, J::Float64, lookup_table::Dict{Float64,Flo
 end
 
 
-function sample_grid(grid::Array{Int,3}, J::Float64, lookup_table::Dict{Float64,Float64}; T::Float64=0.0, B::Float64=0.0, N::Int=1_000, N_Subsweep::Int=1_000)
+function sample_grid(grid::Array{Int,3}, J::Float64, lookup_table::Dict{Float64,Float64}; T::Float64=0.0, B::Float64=0.0, N::Int=1_000, N_Subsweep::Int=1_000, mc_algorithm::Function=metropolis_step)
     energies, magnetisations = Vector{Float64}(undef, N), Vector{Float64}(undef, N)
     energy_ = energy(grid, J, B)
     magnetisation_ = magnetisation(grid)
     grid_len = length(grid)
     for i in 1:N
-        grid, dE, dM = subsweep(grid, J, lookup_table, T, B, N_Subsweep)
+        grid, dE, dM = subsweep(grid, J, lookup_table, T, B, N_Subsweep, mc_algorithm)
         energy_ += dE
         magnetisation_ += dM / grid_len
         energies[i] = energy_
@@ -257,13 +257,13 @@ function sample_grid(grid::Array{Int,3}, J::Float64, lookup_table::Dict{Float64,
 end
 
 @doc "function for sweeping over a temperature intervall using T_Steps steps"
-function temp_sweep(; grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T_End::Float64=10.0, B::Float64=0.0, T_Steps::Int=100, N_Sample::Int=1000, N_Thermalize::Int=100 * grid_size^3, N_Subsweep::Int=3 * grid_size^3, initial_up_prob::Float64=0.5)
+function temp_sweep(; grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T_End::Float64=10.0, B::Float64=0.0, T_Steps::Int=100, N_Sample::Int=1000, N_Thermalize::Int=100 * grid_size^3, N_Subsweep::Int=3 * grid_size^3, initial_up_prob::Float64=0.5, mc_algorithm::Function=metropolis_step)
     energies, energies_std, magnetisations, magnetisations_std, temps = Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps)
     @showprogress "Iterating over temperature..." for (iT, T) in enumerate(range(T_Start, T_End, T_Steps))
         lookup_table = create_lookup_table(T, J=J)
-        grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=lookup_table, T=T, B=B, N=N_Thermalize, initial_up_prob=initial_up_prob)
+        grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=lookup_table, T=T, B=B, N=N_Thermalize, initial_up_prob=initial_up_prob, mc_algorithm=mc_algorithm)
 
-        energies_, magnetisations_ = sample_grid(grid, J, lookup_table, T=T, B=B, N=N_Sample, N_Subsweep=N_Subsweep)
+        energies_, magnetisations_ = sample_grid(grid, J, lookup_table, T=T, B=B, N=N_Sample, N_Subsweep=N_Subsweep, mc_algorithm=mc_algorithm)
 
         magnetisations[iT] = mean(abs.(magnetisations_))
         magnetisations_std[iT] = std(abs.(magnetisations_))
