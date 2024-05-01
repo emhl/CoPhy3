@@ -143,6 +143,68 @@ function metropolis_step(grid::Array{Int,3}, J::Float64, lookup_table::Dict{Floa
     return grid, dE, dM
 end
 
+function cluster_edge_sum(grid::Array{Int,3}, cluster::Array{Bool,3})
+    N1, N2, N3 = size(grid)
+    edge_sum = 0
+    for c in findall(cluster)
+        neighbours = [(mod1(c[1] + 1, N1), c[2], c[3]),
+            (c[1], mod1(c[2] + 1, N2), c[3]),
+            (c[1], c[2], mod1(c[3] + 1, N3)),
+            (mod1(c[1] - 1, N1), c[2], c[3]),
+            (c[1], mod1(c[2] - 1, N2), c[3]),
+            (c[1], c[2], mod1(c[3] - 1, N3))]
+        for n in neighbours
+            if !cluster[n...]
+                edge_sum += grid[n...]
+            end
+        end
+    end
+    return edge_sum
+end
+
+function wolff_cluster(grid::Array{Int,3}, position::Tuple{Int,Int,Int}, J::Float64, lookup_table::Dict{Float64,Float64})
+    N1, N2, N3 = size(grid)
+    i, j, k = position
+    
+    state = grid[i, j, k]
+    cluster = zeros(Bool, N1, N2, N3)
+    cluster[i, j, k] = true
+
+    stack = [(i, j, k)]
+    while !isempty(stack)
+        i, j, k = pop!(stack)
+        neighbours = [(mod1(i + 1, N1), j, k),
+            (i, mod1(j + 1, N2), k),
+            (i, j, mod1(k + 1, N3)),
+            (mod1(i - 1, N1), j, k),
+            (i, mod1(j - 1, N2), k),
+            (i, j, mod1(k - 1, N3))]
+        for n in neighbours
+            neighbour_state = grid[n...]
+            if !cluster[n...] && neighbour_state == state && rand() < 1 - lookup_table[2*J]
+                cluster[n...] = true
+                push!(stack, n)
+            end
+        end
+    end
+    return cluster, state
+end
+
+
+@doc "Wolff Monte Carlo algorithm for ising model"
+function wolff_step(grid::Array{Int,3}, J::Float64, lookup_table::Dict{Float64,Float64}, T::Float64=0.0, B::Float64=0.0)
+    N1, N2, N3 = size(grid)
+    i, j, k = rand(1:N1), rand(1:N2), rand(1:N3)
+    
+    cluster, state = wolff_cluster(grid, (i, j, k), J, lookup_table)
+
+    dE = 2 * J * cluster_edge_sum(grid, cluster) * state
+    dM = -2 * sum(cluster) * state
+
+    grid[cluster] .= -state
+
+    return grid, dE, dM
+end
 
 
 @doc "Function for n repetitions of metropolis_step, tracking the energy and magnetization for constant temperature and field"
