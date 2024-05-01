@@ -22,3 +22,16 @@ Hint: Start with small systems to reduce the computation time.
 probabilities.
 
 5. (OPTIONAL): Plot the time dependence of $M$ for a temperature $T < T_c$. Hint: For small systems you should be able to observe sign-flips in $M$.
+
+## Exercise 2. Finite-size scaling
+
+Goal: In numerical simulations we are only able to tackle relatively small system sizes whereas real physical systems are usually much larger. Finite size scaling analysis is a technique which allows us to get good approximations for the thermodynamic limit.
+
+1. Use your program of the first exercise sheet to perform simulations of the 3D Ising system for different system sizes to determine the critical exponents γ and ν.
+
+    Hint: Use the finite size scaling relation of the magnetic susceptibility and the fact that the critical temperature is given by Tc ≈ 4.51.
+
+    You might find the following points useful:
+   - You can get a first estimate for the ratio γ/ν by plotting χmax as a function of the system size.
+   - Vary γ/ν and 1/ν until you get the best possible data collapse. Judge the quality of the data collapse ”by eye”.
+1. (OPTIONAL): Repeat the same process for the specific heat.
