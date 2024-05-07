@@ -274,6 +274,21 @@ function temp_sweep(; grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T
     return (energies, energies_std), (magnetisations, magnetisations_std), temps
 end
 
+function simple_monte_carlo(; grid_size::Int=10, J::Float64=1.0, T::Float64=0.0, B::Float64=0.0, N::Int=100_000, initial_up_prob::Float64=0.5, mc_algorithm::Function=metropolis_step)
+    grid = create_grid(grid_size, up_prob=initial_up_prob)
+    energies, magnetisations = Vector{Float64}(undef, N), Vector{Float64}(undef, N)
+    lookup_table = create_lookup_table(T, J=J)
+    E = energy(grid, J, B)
+    M = magnetisation(grid)
+    for i in 1:N
+        grid, dE, dM = mc_algorithm(grid, J, lookup_table, T, B)
+        E += dE
+        M += dM
+        energies[i] = E
+        magnetisations[i] = M
+    end
+    return energies, magnetisations
+end
 
 @doc "derivative of one vector by the other"
 function dv(x::Vector, y::Vector)
