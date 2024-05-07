@@ -256,20 +256,19 @@ function sample_grid(grid::Array{Int,3}, J::Float64, lookup_table::Dict{Float64,
     return energies, magnetisations
 end
 
+function measure_single_config(; grid_size::Int=10, J::Float64=1.0, T::Float64=0.0, B::Float64=0.0, N_Sample::Int=1000, N_Thermalize::Int=100 * grid_size^3, N_Subsweep::Int=3 * grid_size^3, initial_up_prob::Float64=0.5, mc_algorithm::Function=metropolis_step)
+    lookup_table = create_lookup_table(T, J=J)
+    grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=lookup_table, T=T, B=B, N=N_Thermalize, initial_up_prob=initial_up_prob, mc_algorithm=mc_algorithm)
+    energies, magnetisations = sample_grid(grid, J, lookup_table, T=T, B=B, N=N_Sample, N_Subsweep=N_Subsweep, mc_algorithm=mc_algorithm)
+    # only take the absolute value of the magnetisation, because the system is symmetric
+    return (mean(energies), std(energies)), (mean(abs.(magnetisations)), std(abs.(magnetisations)))
+end
+
 @doc "function for sweeping over a temperature intervall using T_Steps steps"
 function temp_sweep(; grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T_End::Float64=10.0, B::Float64=0.0, T_Steps::Int=100, N_Sample::Int=1000, N_Thermalize::Int=100 * grid_size^3, N_Subsweep::Int=3 * grid_size^3, initial_up_prob::Float64=0.5, mc_algorithm::Function=metropolis_step)
     energies, energies_std, magnetisations, magnetisations_std, temps = Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps)
     @showprogress "Iterating over temperature..." for (iT, T) in enumerate(range(T_Start, T_End, T_Steps))
-        lookup_table = create_lookup_table(T, J=J)
-        grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=lookup_table, T=T, B=B, N=N_Thermalize, initial_up_prob=initial_up_prob, mc_algorithm=mc_algorithm)
-
-        energies_, magnetisations_ = sample_grid(grid, J, lookup_table, T=T, B=B, N=N_Sample, N_Subsweep=N_Subsweep, mc_algorithm=mc_algorithm)
-
-        magnetisations[iT] = mean(abs.(magnetisations_))
-        magnetisations_std[iT] = std(abs.(magnetisations_))
-        # only take the absolute value of the magnetisation, because the system is symmetric
-        energies[iT] = mean(energies_)
-        energies_std[iT] = std(energies_)
+        (energies[iT], energies_std[iT]), (magnetisations[iT], magnetisations_std[iT]) = measure_single_config(grid_size=grid_size, J=J, T=T, B=B, N_Sample=N_Sample, N_Thermalize=N_Thermalize, N_Subsweep=N_Subsweep, initial_up_prob=initial_up_prob, mc_algorithm=mc_algorithm)
         temps[iT] = T
     end
     return (energies, energies_std), (magnetisations, magnetisations_std), temps
