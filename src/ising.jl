@@ -261,17 +261,19 @@ function measure_single_config(; grid_size::Int=10, J::Float64=1.0, T::Float64=0
     grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=lookup_table, T=T, B=B, N=N_Thermalize, initial_up_prob=initial_up_prob, mc_algorithm=mc_algorithm)
     energies, magnetisations = sample_grid(grid, J, lookup_table, T=T, B=B, N=N_Sample, N_Subsweep=N_Subsweep, mc_algorithm=mc_algorithm)
     # only take the absolute value of the magnetisation, because the system is symmetric
-    return (mean(energies), std(energies)), (mean(abs.(magnetisations)), std(abs.(magnetisations)))
+    return (mean(energies), std(energies), mean(energies.^2), mean(energies.^4)), (mean(abs.(magnetisations)), std(abs.(magnetisations)), mean(abs.(magnetisations).^2), mean(abs.(magnetisations).^4))
 end
 
 @doc "function for sweeping over a temperature intervall using T_Steps steps"
 function temp_sweep(; grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T_End::Float64=10.0, B::Float64=0.0, T_Steps::Int=100, N_Sample::Int=1000, N_Thermalize::Int=100 * grid_size^3, N_Subsweep::Int=3 * grid_size^3, initial_up_prob::Float64=0.5, mc_algorithm::Function=metropolis_step)
-    energies, energies_std, magnetisations, magnetisations_std, temps = Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps)
+    energies, energies_std, energies_2, energies_4 = Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps)
+    magnetisations, magnetisations_std, magnetisations_2, magnetisations_4 = Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps), Vector{Float64}(undef, T_Steps)
+    temps = Vector{Float64}(undef, T_Steps)
     @showprogress Threads.@threads for (iT, T) in collect(enumerate(range(T_Start, T_End, T_Steps)))
-        (energies[iT], energies_std[iT]), (magnetisations[iT], magnetisations_std[iT]) = measure_single_config(grid_size=grid_size, J=J, T=T, B=B, N_Sample=N_Sample, N_Thermalize=N_Thermalize, N_Subsweep=N_Subsweep, initial_up_prob=initial_up_prob, mc_algorithm=mc_algorithm)
+        (energies[iT], energies_std[iT], energies_2[iT], energies_4[iT]), (magnetisations[iT], magnetisations_std[iT], magnetisations_2[iT], magnetisations_4[iT]) = measure_single_config(grid_size=grid_size, J=J, T=T, B=B, N_Sample=N_Sample, N_Thermalize=N_Thermalize, N_Subsweep=N_Subsweep, initial_up_prob=initial_up_prob, mc_algorithm=mc_algorithm)
         temps[iT] = T
     end
-    return (energies, energies_std), (magnetisations, magnetisations_std), temps
+    return (energies, energies_std, energies_2, energies_4), (magnetisations, magnetisations_std, magnetisations_2, magnetisations_4), temps
 end
 
 function simple_monte_carlo(; grid_size::Int=10, J::Float64=1.0, T::Float64=0.0, B::Float64=0.0, N::Int=100_000, initial_up_prob::Float64=0.5, mc_algorithm::Function=metropolis_step)
