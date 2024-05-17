@@ -129,9 +129,7 @@ end
 @doc "Metropolitan Step function for different input arguments"
 function metropolis_step(grid::Array{Int,3}, J::Float64, lookup_table::Dict{Float64,Float64}, T::Float64=0.0, B::Float64=0.0)
     N1, N2, N3 = size(grid)
-    i = rand(1:N1)
-    j = rand(1:N2)
-    k = rand(1:N3)
+    i, j, k = rand(1:N1), rand(1:N2), rand(1:N3)
     dE = energy_diff(grid, (i, j, k), J=J, B=B)
     if rand() < lookup_table[dE]
         grid[i, j, k] *= -1
@@ -165,7 +163,7 @@ end
 function wolff_cluster(grid::Array{Int,3}, position::Tuple{Int,Int,Int}, J::Float64, lookup_table::Dict{Float64,Float64})
     N1, N2, N3 = size(grid)
     i, j, k = position
-    
+
     state = grid[i, j, k]
     cluster = zeros(Bool, N1, N2, N3)
     cluster[i, j, k] = true
@@ -195,7 +193,7 @@ end
 function wolff_step(grid::Array{Int,3}, J::Float64, lookup_table::Dict{Float64,Float64}, T::Float64=0.0, B::Float64=0.0)
     N1, N2, N3 = size(grid)
     i, j, k = rand(1:N1), rand(1:N2), rand(1:N3)
-    
+
     cluster, state = wolff_cluster(grid, (i, j, k), J, lookup_table)
 
     dE = 2 * J * cluster_edge_sum(grid, cluster) * state
@@ -261,7 +259,7 @@ function measure_single_config(; grid_size::Int=10, J::Float64=1.0, T::Float64=0
     grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=lookup_table, T=T, B=B, N=N_Thermalize, initial_up_prob=initial_up_prob, mc_algorithm=mc_algorithm)
     energies, magnetisations = sample_grid(grid, J, lookup_table, T=T, B=B, N=N_Sample, N_Subsweep=N_Subsweep, mc_algorithm=mc_algorithm)
     # only take the absolute value of the magnetisation, because the system is symmetric
-    return (mean(energies), std(energies), mean(energies.^2), mean(energies.^4)), (mean(abs.(magnetisations)), std(abs.(magnetisations)), mean(abs.(magnetisations).^2), mean(abs.(magnetisations).^4))
+    return (mean(energies), std(energies), mean(energies .^ 2), mean(energies .^ 4)), (mean(abs.(magnetisations)), std(abs.(magnetisations)), mean(abs.(magnetisations) .^ 2), mean(abs.(magnetisations) .^ 4))
 end
 
 @doc "function for sweeping over a temperature intervall using T_Steps steps"
