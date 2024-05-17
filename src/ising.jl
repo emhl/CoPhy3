@@ -312,3 +312,15 @@ function dv(x::Vector, y::Vector)
 
     return derivative
 end
+
+@doc "autocorrelation function"
+function autocorr(x::Vector{Float64}; max_lag::Int=100)
+    n = length(x)
+    x_m = mean(x)
+    x_ = x .- x_m
+    r = zeros(max_lag)
+    for k in 1:max_lag
+        r[k] = sum(x_[1:(n-k)] .* x_[(k+1):n]) / (n - k)
+    end
+    return r
+end
