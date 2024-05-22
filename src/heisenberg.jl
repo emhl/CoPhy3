@@ -89,12 +89,12 @@ end
 function metropolis_step(grid::Tuple{Array{Float64,3},Array{Float64,3},Array{Float64,3}}, T::Float64, J::Float64=1.0)
     x_grid, y_grid, z_grid = grid
     L = size(x_grid)[1]
-    i, j, k = rand(1:L), rand(1:L), rand(1:L)
+    pos = rand(1:L), rand(1:L), rand(1:L)
     new_spin = normalize_spin(rand([-1.0, 1.0], 3))
-    energy_diff = get_energy_diff(grid, pos=(i, j, k), new_spin=new_spin, J=J)
+    energy_diff = get_energy_diff(grid, pos=pos, new_spin=new_spin, J=J)
     if rand() < get_state_prob(energy_diff, T)
-        mag_diff = get_magnetization_diff(grid, pos=(i, j, k), new_spin=new_spin)
-        x_grid[i, j, k], y_grid[i, j, k], z_grid[i, j, k] = new_spin
+        mag_diff = get_magnetization_diff(grid, pos=pos, new_spin=new_spin)
+        x_grid[pos...], y_grid[pos...], z_grid[pos...] = new_spin
     else
         mag_diff = [0.0, 0.0, 0.0]
         energy_diff = 0.0
