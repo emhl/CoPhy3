@@ -110,70 +110,45 @@ function get_bond_prob(r::Tuple{Float64,Float64,Float64}, spin_i::Tuple{Float64,
     return 1 - exp(-2 * J / T * dot(r, spin_i) * dot(r, spin_j))
 end
 
-function wolff_cluster(grid::Tuple{Array{Float64,3},Array{Float64,3},Array{Float64,3}}, pos::Tuple{Int64,Int64,Int64}, r::Tuple{Float64,Float64,Float64}, T::Float64, J::Float64)
+
+function nn_sum(grid::Tuple{Array{Float64,3},Array{Float64,3},Array{Float64,3}}, pos::Tuple{Int64,Int64,Int64}; L::Int64=size(grid[1])[1])
     x_grid, y_grid, z_grid = grid
-    L = size(x_grid)[1]
-    cluster = zeros(Bool, L, L, L)
-    cluster[pos...] = true
-    stack = [pos]
-    while !isempty(stack)
-        i, j, k = pop!(stack)
-        for (di, dj, dk) in [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)]
-            i_, j_, k_ = mod1(i + di, L), mod1(j + dj, L), mod1(k + dk, L)
-            if !cluster[i_, j_, k_] && rand() > get_bond_prob(r, (x_grid[i, j, k], y_grid[i, j, k], z_grid[i, j, k]), (x_grid[i_, j_, k_], y_grid[i_, j_, k_], z_grid[i_, j_, k_]), T, J)
-                cluster[i_, j_, k_] = true
-                push!(stack, (i_, j_, k_))
-            end
-        end
-    end
-    return cluster
+    i, j, k = pos
+    neighbors = [(mod1(i + 1, L), j, k), (mod1(i - 1, L), j, k), (i, mod1(j + 1, L), k), (i, mod1(j - 1, L), k), (i, j, mod1(k + 1, L)), (i, j, mod1(k - 1, L))]
+    return sum(x_grid[n...] for n in neighbors), sum(y_grid[n...] for n in neighbors), sum(z_grid[n...] for n in neighbors)
 end
 
-function wolff_cluster_energy(grid::Tuple{Array{Float64,3},Array{Float64,3},Array{Float64,3}}, cluster::Array{Bool,3}, J::Float64)
+
+function wolff_flip(grid::Tuple{Array{Float64,3},Array{Float64,3},Array{Float64,3}}, pos::Tuple{Int64,Int64,Int64}, r::Tuple{Float64,Float64,Float64}, dE::Float64=0.0, dM::Array{Float64,1}=[0.0, 0.0, 0.0]; T::Float64=1.0, J::Float64=1.0)
     x_grid, y_grid, z_grid = grid
     L = size(x_grid)[1]
-    energy = 0.0
-    for c in findall(cluster)
-        for (di, dj, dk) in [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)]
-            i, j, k = mod1(c[1] + di, L), mod1(c[2] + dj, L), mod1(c[3] + dk, L)
-            energy += -J * (x_grid[c] * x_grid[i, j, k] + y_grid[c] * y_grid[i, j, k] + z_grid[c] * z_grid[i, j, k])
+
+    spin = x_grid[pos...], y_grid[pos...], z_grid[pos...]
+    new_spin = normalize_spin(spin .- 2 * dot(spin, r) .* r)
+    dM_ = new_spin .- spin
+    dM = dM .+ dM_
+    dE -= J * dot(dM_, nn_sum(grid, pos,L=L))
+    x_grid[pos...], y_grid[pos...], z_grid[pos...] = new_spin
+    
+    i, j, k = pos
+    neighbors = [(mod1(i + 1, L), j, k), (mod1(i - 1, L), j, k), (i, mod1(j + 1, L), k), (i, mod1(j - 1, L), k), (i, j, mod1(k + 1, L)), (i, j, mod1(k - 1, L))]
+    for n in neighbors
+        if rand() < get_bond_prob(r, spin, (x_grid[n...], y_grid[n...], z_grid[n...]), T, J)
+            grid, dE, dM = wolff_flip(grid, n, r, dE, dM, T=T, J=J)
         end
     end
-    return energy
+    return grid, dE, dM
 end
 
 
 function wolff_step(grid::Tuple{Array{Float64,3},Array{Float64,3},Array{Float64,3}}, T::Float64, J::Float64=1.0)
-    x_grid, y_grid, z_grid = grid
-    L = size(x_grid)[1]
+    L = size(grid[1])[1]
     pos = rand(1:L), rand(1:L), rand(1:L)
     r = normalize_spin(rand([-1.0, 1.0], 3))
 
-    cluster = wolff_cluster(grid, pos, r, T, J)
+    grid, dE, dM = wolff_flip(grid, pos, r, T=T, J=J)
 
-    energy_diff = -wolff_cluster_energy(grid, cluster, J)
-
-    scalar_product = x_grid[cluster] .* r[1] + y_grid[cluster] .* r[2] + z_grid[cluster] .* r[3]
-
-    mag_diff_x = -2 * scalar_product .* r[1]
-    mag_diff_y = -2 * scalar_product .* r[2]
-    mag_diff_z = -2 * scalar_product .* r[3]
-
-    x_grid[cluster] += mag_diff_x
-    y_grid[cluster] += mag_diff_y
-    z_grid[cluster] += mag_diff_z
-
-    mag_diff = [sum(mag_diff_x), sum(mag_diff_y), sum(mag_diff_z)]
-
-    # normalize spins ?
-    x_grid[cluster], y_grid[cluster], z_grid[cluster] = normalize_spins(x_grid[cluster], y_grid[cluster], z_grid[cluster])
-
-    # spin_length = sqrt.(x_grid[cluster] .^ 2 + y_grid[cluster] .^ 2 + z_grid[cluster] .^ 2)
-    # println(min(spin_length...), max(spin_length...))
-
-    energy_diff += wolff_cluster_energy(grid, cluster, J)
-
-    return (x_grid, y_grid, z_grid), energy_diff, mag_diff
+    return grid, dE, dM
 end
 
 
