@@ -217,9 +217,8 @@ function wolff_step(grid::Array{Int,3}, J::Float64, lookup_table::Dict{Float64,F
     L = size(grid, 1)
     pos = rand(1:L), rand(1:L), rand(1:L)
 
-    dE, dM = 0.0, 0
     prob = 1 - lookup_table[2*J]
-    grid, dE, dM = wolff_flip(grid, pos, dM, dE, L=L,  J=J,prob=prob)
+    grid, dE, dM = wolff_flip(grid, pos, L=L, J=J, prob=prob)
 
     return grid, dE, dM
 end
