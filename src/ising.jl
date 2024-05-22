@@ -188,13 +188,13 @@ function wolff_cluster(grid::Array{Int,3}, position::Tuple{Int,Int,Int}, J::Floa
     return cluster, state
 end
 
-function nn_sum(grid::Array{Int,3}, pos::Tuple{Int,Int,Int},L::Int=size(grid, 1))
+function nn_sum(grid::Array{Int,3}, pos::Tuple{Int,Int,Int}, L::Int=size(grid, 1))
     i, j, k = pos
     m = grid[mod1(i + 1, L), j, k] + grid[mod1(i - 1, L), j, k]
     m += grid[i, mod1(j + 1, L), k] + grid[i, mod1(j - 1, L), k]
     m += grid[i, j, mod1(k + 1, L)] + grid[i, j, mod1(k - 1, L)]
     return m
-    
+
 end
 
 function wolff_flip(grid::Array{Int,3}, pos::Tuple{Int,Int,Int}, dM::Int=0, dE::Float64=0.0; L::Int=size(grid, 1), J::Float64=1.0, prob::Float64=0.0)
@@ -202,11 +202,11 @@ function wolff_flip(grid::Array{Int,3}, pos::Tuple{Int,Int,Int}, dM::Int=0, dE::
     grid[pos...] *= -1
     dM -= 2 * spin
     dE += 2 * J * spin * nn_sum(grid, pos, L)
-    neighbours = [(1,0,0 ), (-1,0,0), (0,1,0), (0,-1,0), (0,0,1), (0,0,-1)]
+    neighbours = [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)]
     for n in neighbours
         n_pos = mod1.(pos .+ n, L)
         if grid[n_pos...] == spin && rand() < prob
-            grid , dM, dE = wolff_flip(grid, n_pos, dM, dE, L=L, J=J, prob=prob)
+            grid, dM, dE = wolff_flip(grid, n_pos, dM, dE, L=L, J=J, prob=prob)
         end
     end
     return grid, dM, dE

@@ -45,7 +45,7 @@ function get_energy(grid::Tuple{Array{Float64,3},Array{Float64,3},Array{Float64,
     L = size(x_grid)[1]
     energy = 0.0
     for i in 1:L, j in 1:L, k in 1:L
-        neighbors = [(mod1(i + 1, L), j, k), (i, mod1(j + 1, L), k), (i, j, mod1(k + 1, L)) ]
+        neighbors = [(mod1(i + 1, L), j, k), (i, mod1(j + 1, L), k), (i, j, mod1(k + 1, L))]
         energy += -J * x_grid[i, j, k] * sum(x_grid[n...] for n in neighbors)
         energy += -J * y_grid[i, j, k] * sum(y_grid[n...] for n in neighbors)
         energy += -J * z_grid[i, j, k] * sum(z_grid[n...] for n in neighbors)
@@ -127,9 +127,9 @@ function wolff_flip(grid::Tuple{Array{Float64,3},Array{Float64,3},Array{Float64,
     new_spin = normalize_spin(spin .- 2 * dot(spin, r) .* r)
     dM_ = new_spin .- spin
     dM = dM .+ dM_
-    dE -= J * dot(dM_, nn_sum(grid, pos,L=L))
+    dE -= J * dot(dM_, nn_sum(grid, pos, L=L))
     x_grid[pos...], y_grid[pos...], z_grid[pos...] = new_spin
-    
+
     i, j, k = pos
     neighbors = [(mod1(i + 1, L), j, k), (mod1(i - 1, L), j, k), (i, mod1(j + 1, L), k), (i, mod1(j - 1, L), k), (i, j, mod1(k + 1, L)), (i, j, mod1(k - 1, L))]
     for n in neighbors
@@ -188,12 +188,12 @@ end
 function measure_single_config(; grid_size::Int=10, J::Float64=1.0, T::Float64=0.0, N_Sample::Int=1_000, N_Thermalize::Int=1000 * grid_size^3, N_Subsweep::Int=3 * grid_size^3, mc_algo::Function=metropolis_step)
     grid = thermalize_grid(grid_size=grid_size, J=J, T=T, N=N_Thermalize, mc_algo=mc_algo)
     energies, magnetisations = sample_grid(grid, T=T, J=J, N_Subsweep=N_Subsweep, N_Thermalize=N_Thermalize, N_Sample=N_Sample, mc_algo=mc_algo)
-    binder_cumulant = 1 - mean(magnetisations[1].^4 + magnetisations[2].^4 + magnetisations[3].^4) / (3 * mean(magnetisations[1].^2 + magnetisations[2].^2 + magnetisations[3].^2)^2)
-    return (mean(energies), std(energies)), (mean(mean(magnetisations)), mean(std(magnetisations))), binder_cumulant 
+    binder_cumulant = 1 - mean(magnetisations[1] .^ 4 + magnetisations[2] .^ 4 + magnetisations[3] .^ 4) / (3 * mean(magnetisations[1] .^ 2 + magnetisations[2] .^ 2 + magnetisations[3] .^ 2)^2)
+    return (mean(energies), std(energies)), (mean(mean(magnetisations)), mean(std(magnetisations))), binder_cumulant
 end
 
 
-function temp_sweep(; grid_size::Int=10, J::Float64=1.0, T_min::Float64=0.1, T_max::Float64=5.0, T_Steps::Int=100, N_Sample::Int=10_000, N_Thermalize::Int=100*grid_size^3, N_Subsweep::Int=3*grid_size^3, mc_algo::Function=metropolis_step)
+function temp_sweep(; grid_size::Int=10, J::Float64=1.0, T_min::Float64=0.1, T_max::Float64=5.0, T_Steps::Int=100, N_Sample::Int=10_000, N_Thermalize::Int=100 * grid_size^3, N_Subsweep::Int=3 * grid_size^3, mc_algo::Function=metropolis_step)
     Ts = range(T_min, T_max, length=T_Steps)
     energies = Vector{Float64}(undef, length(Ts))
     energies_std = Vector{Float64}(undef, length(Ts))

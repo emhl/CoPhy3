@@ -179,7 +179,7 @@ end
 function measure_single_config(; grid_size::Int=10, J::Float64=1.0, T::Float64=0.0, B::Float64=0.0, N_Sample::Int=1000, N_Thermalize::Int=100 * grid_size^2, N_Subsweep::Int=3 * grid_size^2, initial_up_prob::Float64=0.5, mc_algorithm::Function=metropolis_step)
     lookup_table = create_lookup_table(T, J=J)
     grid = create_equilibrated_grid(grid_size=grid_size, J=J, lookup_table=lookup_table, T=T, B=B, N=N_Thermalize, initial_up_prob=initial_up_prob, mc_algorithm=mc_algorithm)
-    energies, magnetisations = sample_grid(grid, lookup_table,J=J, T=T, B=B, N=N_Sample, N_Subsweep=N_Subsweep, mc_algorithm=mc_algorithm)
+    energies, magnetisations = sample_grid(grid, lookup_table, J=J, T=T, B=B, N=N_Sample, N_Subsweep=N_Subsweep, mc_algorithm=mc_algorithm)
     # only take the absolute value of the magnetisation, because the system is symmetric
     return (mean(energies), std(energies), mean(energies .^ 2), mean(energies .^ 4)), (mean(abs.(magnetisations)), std(abs.(magnetisations)), mean(abs.(magnetisations) .^ 2), mean(abs.(magnetisations) .^ 4))
 end
