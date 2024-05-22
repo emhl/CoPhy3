@@ -188,18 +188,38 @@ function wolff_cluster(grid::Array{Int,3}, position::Tuple{Int,Int,Int}, J::Floa
     return cluster, state
 end
 
+function nn_sum(grid::Array{Int,3}, pos::Tuple{Int,Int,Int},L::Int=size(grid, 1))
+    i, j, k = pos
+    m = grid[mod1(i + 1, L), j, k] + grid[mod1(i - 1, L), j, k]
+    m += grid[i, mod1(j + 1, L), k] + grid[i, mod1(j - 1, L), k]
+    m += grid[i, j, mod1(k + 1, L)] + grid[i, j, mod1(k - 1, L)]
+    return m
+    
+end
+
+function wolff_flip(grid::Array{Int,3}, pos::Tuple{Int,Int,Int}, dM::Int=0, dE::Float64=0.0; L::Int=size(grid, 1), J::Float64=1.0, prob::Float64=0.0)
+    spin = grid[pos...] # save the spin value be
+    grid[pos...] *= -1
+    dM -= 2 * spin
+    dE += 2 * J * spin * nn_sum(grid, pos, L)
+    neighbours = [(1,0,0 ), (-1,0,0), (0,1,0), (0,-1,0), (0,0,1), (0,0,-1)]
+    for n in neighbours
+        n_pos = mod1.(pos .+ n, L)
+        if grid[n_pos...] == spin && rand() < prob
+            grid , dM, dE = wolff_flip(grid, n_pos, dM, dE, L=L, J=J, prob=prob)
+        end
+    end
+    return grid, dM, dE
+end
 
 @doc "Wolff Monte Carlo algorithm for ising model"
 function wolff_step(grid::Array{Int,3}, J::Float64, lookup_table::Dict{Float64,Float64}, T::Float64=0.0, B::Float64=0.0)
-    N1, N2, N3 = size(grid)
-    i, j, k = rand(1:N1), rand(1:N2), rand(1:N3)
+    L = size(grid, 1)
+    pos = rand(1:L), rand(1:L), rand(1:L)
 
-    cluster, state = wolff_cluster(grid, (i, j, k), J, lookup_table)
-
-    dE = 2 * J * cluster_edge_sum(grid, cluster) * state
-    dM = -2 * sum(cluster) * state
-
-    grid[cluster] .= -state
+    dE, dM = 0.0, 0
+    prob = 1 - lookup_table[2*J]
+    grid, dE, dM = wolff_flip(grid, pos, dM, dE, L=L,  J=J,prob=prob)
 
     return grid, dE, dM
 end
@@ -274,16 +294,18 @@ function temp_sweep(; grid_size::Int=10, J::Float64=1.0, T_Start::Float64=0.0, T
     return (energies, energies_std, energies_2, energies_4), (magnetisations, magnetisations_std, magnetisations_2, magnetisations_4), temps
 end
 
-function simple_monte_carlo(; grid_size::Int=10, J::Float64=1.0, T::Float64=0.0, B::Float64=0.0, N::Int=100_000, initial_up_prob::Float64=0.5, mc_algorithm::Function=metropolis_step)
+function simple_monte_carlo(; grid_size::Int=10, J::Float64=1.0, T::Float64=0.0, B::Float64=0.0, N::Int=100_000, N_Subsweep::Int=1, initial_up_prob::Float64=0.5, mc_algorithm::Function=metropolis_step)
     grid = create_grid(grid_size, up_prob=initial_up_prob)
     energies, magnetisations = Vector{Float64}(undef, N), Vector{Float64}(undef, N)
     lookup_table = create_lookup_table(T, J=J)
     E = energy(grid, J, B)
     M = magnetisation(grid)
     for i in 1:N
-        grid, dE, dM = mc_algorithm(grid, J, lookup_table, T, B)
-        E += dE
-        M += dM
+        for j in 1:N_Subsweep
+            grid, dE, dM = mc_algorithm(grid, J, lookup_table, T, B)
+            E += dE
+            M += dM
+        end
         energies[i] = E
         magnetisations[i] = M
     end
