@@ -1,5 +1,6 @@
 using Statistics
 using ProgressMeter
+import LsqFit
 
 
 function normalize_spin(x::Float64, y::Float64, z::Float64)
@@ -170,7 +171,7 @@ function subsweep(grid::Tuple{Array{Float64,3},Array{Float64,3},Array{Float64,3}
     return grid, energy_diff, mag_diff
 end
 
-function sample_grid(grid::Tuple{Array{Float64,3},Array{Float64,3},Array{Float64,3}}; T::Float64=0.0, J::Float64=1.0, N_Subsweep::Int64=1_000, N_Thermalize::Int64=1_000, N_Sample::Int64=1_000, mc_algo::Function=metropolis_step)
+function sample_grid(grid::Tuple{Array{Float64,3},Array{Float64,3},Array{Float64,3}}; T::Float64=0.0, J::Float64=1.0, N_Subsweep::Int64=1_000,N_Sample::Int64=1_000, mc_algo::Function=metropolis_step)
     energies = Vector{Float64}(undef, N_Sample)
     x_mag, y_mag, z_mag = Vector{Float64}(undef, N_Sample), Vector{Float64}(undef, N_Sample), Vector{Float64}(undef, N_Sample)
     energy = get_energy(grid, J)
@@ -187,7 +188,7 @@ end
 
 function measure_single_config(; grid_size::Int=10, J::Float64=1.0, T::Float64=0.0, N_Sample::Int=1_000, N_Thermalize::Int=1000 * grid_size^3, N_Subsweep::Int=3 * grid_size^3, mc_algo::Function=metropolis_step)
     grid = thermalize_grid(grid_size=grid_size, J=J, T=T, N=N_Thermalize, mc_algo=mc_algo)
-    energies, magnetisations = sample_grid(grid, T=T, J=J, N_Subsweep=N_Subsweep, N_Thermalize=N_Thermalize, N_Sample=N_Sample, mc_algo=mc_algo)
+    energies, magnetisations = sample_grid(grid, T=T, J=J, N_Subsweep=N_Subsweep, N_Sample=N_Sample, mc_algo=mc_algo)
     binder_cumulant = 1 - mean(magnetisations[1] .^ 4 + magnetisations[2] .^ 4 + magnetisations[3] .^ 4) / (3 * mean(magnetisations[1] .^ 2 + magnetisations[2] .^ 2 + magnetisations[3] .^ 2)^2)
     return (mean(energies), std(energies)), (mean(mean(magnetisations)), mean(std(magnetisations))), binder_cumulant
 end
@@ -206,3 +207,32 @@ function temp_sweep(; grid_size::Int=10, J::Float64=1.0, T_min::Float64=0.1, T_m
     return Ts, (energies, energies_std), (magnetisations, magnetisations_std), binder_cum
 end
 
+
+@doc "autocorrelation function"
+function autocorr(x::Vector{Float64}; max_lag::Int=100)
+    n = length(x)
+    x_m = mean(x)
+    x_ = x .- x_m
+    r = zeros(max_lag)
+    Threads.@threads for k in 1:max_lag
+        r[k] = sum(x_[1:(n-k)] .* x_[(k+1):n]) / (n - k)
+    end
+    return r
+end
+
+
+function get_ac_time(energy; max_lag::Int=100)
+    ac = autocorr(energy, max_lag=max_lag)
+    # if the autocorrelation gets negative, remove the values after that
+    if any(ac .< 0)
+        ac = ac[1:findfirst(ac .< 0)-1]
+    end
+
+    ac_log = log.(ac)
+    time = collect(1:length(ac_log))
+
+    linfit(x, p) = p[1] * x .+ p[2]
+
+    fit = LsqFit.curve_fit(linfit, time, ac_log, [1., 1.])
+    return 1/abs(fit.param[1])
+end
