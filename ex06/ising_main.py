@@ -16,14 +16,14 @@ import yaml
 
 here = os.path.dirname(os.path.abspath(__file__))
 
-datah5 = dd.io.load(here+'/data/ising/ising_data_complete.hdf5')
+datah5 = dd.io.load(here+'/data/ising/ising_data.hdf5')
 
 #Transform -1 in 0 and take spin up as standard configuration
 binarizer = Binarizer(threshold=0)
 keys = list(datah5.keys())
 
 #put here the temperature from keys that you want to use for the training
-class_names = [keys[i] for i in [0,3,5]]
+class_names = [keys[i] for i in [0,1,2]]
 n_samples = datah5[keys[0]].shape[0]
 datah5_norm={}
 data_bin={}
