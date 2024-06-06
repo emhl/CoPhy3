@@ -1,0 +1,20 @@
+_batch_size: 128
+_current_time: 0606-125259
+_h_dim: 800
+_l_r: 0.8
+_log_dir: logs/scalars/0606-125259/train
+_n_epoch: 100
+_picture_shape: !!python/tuple
+- 32
+- 32
+_v_dim: 1024
+data:
+- '1.0'
+- '2.2'
+- '3.0'
+epoch: 1
+eps: 1.0e-08
+learning_rate: 0.9
+n_test_samples: 100
+opt: adam
+training_algorithm: cd
