@@ -16,11 +16,13 @@ import yaml
 
 here = os.path.dirname(os.path.abspath(__file__))
 
-datah5 = dd.io.load(here+'/data/ising/ising_data.hdf5')
+datah5 = dd.io.load(here+'/data/ising/ising_data_L32.h5')
 
 #Transform -1 in 0 and take spin up as standard configuration
 binarizer = Binarizer(threshold=0)
 keys = list(datah5.keys())
+
+print(keys)
 
 #put here the temperature from keys that you want to use for the training
 class_names = [keys[i] for i in [0,1,2]]
@@ -48,7 +50,7 @@ x_test = x_test.reshape(x_test.shape[0],-1).astype(np.float32)
 data = {"x_train": x_train ,"y_train": y_train,"x_test": x_test,"y_test": y_test}
 
 #Create a restricted boltzmann machines
-machine = RBM(x_train[0].shape[0], 800, 100, (32, 32), 128,'cd')
+machine = RBM(visible_dim=x_train[0].shape[0], hidden_dim=800, number_of_epochs=100, picture_shape=(32, 32), batch_size=128)
 
 optimus = Optimizer(machine, 0.9, opt = 'adam')
 

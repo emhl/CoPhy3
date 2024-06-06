@@ -26,3 +26,6 @@ Manifest.toml
 .vscode/
 .venv/
 __pycache__
+*/results/models/
+logs/
+training_*/
