@@ -9,25 +9,17 @@ end
 function calc_distances(pos::Tuple{Float64,Float64,Float64}, particles::Tuple{Array{Float64,1},Array{Float64,1},Array{Float64,1}};L::Float64=10.0)
     # ToDo: add periodic boundary conditions
     x_part, y_part, z_part = particles
-
-    parts = mod.(x_part, L), mod.(y_part, L), mod.(z_part, L)
-
-    # create virtual particles for out of bounds particles.
-    for i in 1:3
-        x_part_ = parts[1][particles[i] .!= parts[i]]
-        y_part_ = parts[2][particles[i] .!= parts[i]]
-        z_part_ = parts[3][particles[i] .!= parts[i]]
-
-        append!(x_part, x_part_)
-        append!(y_part, y_part_)
-        append!(z_part, z_part_)
-    end
-    
+    x_part, y_part, z_part = mod.(x_part, L), mod.(y_part, L), mod.(z_part, L)
     x_pos, y_pos, z_pos = mod.(pos, L)
 
-    x_dist =  x_part .- x_pos
-    y_dist =  y_part .- y_pos
-    z_dist =  z_part .- z_pos
+    x_dist =  abs.(x_part .- x_pos)
+    y_dist =  abs.(y_part .- y_pos)
+    z_dist =  abs.(z_part .- z_pos)
+
+    # periodic boundary conditions
+    for r_dist in [x_dist, y_dist, z_dist]
+        r_dist[r_dist .> L/2] = L .- r_dist[r_dist .> L/2]
+    end
 
     return sqrt.(x_dist .^ 2 .+ y_dist .^ 2 .+ z_dist .^ 2), (x_dist, y_dist, z_dist)
 end
